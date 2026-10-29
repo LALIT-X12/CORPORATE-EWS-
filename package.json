@@ -1,0 +1,31 @@
+{
+  "name": "corporate-ews",
+  "version": "2.0.0",
+  "description": "Explainable Early-Warning System for Corporate Default and Financial Manipulation",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "node server/server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.3.0",
+    "sqlite3": "^6.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "early-warning-system",
+    "credit-risk",
+    "corporate-default",
+    "beneish-m-score",
+    "piotroski-f-score",
+    "altman-z-score",
+    "relational-fraud",
+    "shap-explainability",
+    "multi-modal-audit"
+  ],
+  "author": "Corporate Risk & Credit Analytics",
+  "license": "Apache-2.0"
+}

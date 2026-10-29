@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Corporate EWS</string>
+    <string name="tagline">Early-Warning Intelligence</string>
+    <string name="nav_overview">Overview</string>
+    <string name="nav_watchlist">Watchlist</string>
+    <string name="nav_investigate">Investigate</string>
+    <string name="nav_evidence">Evidence</string>
+    <string name="nav_settings">Settings</string>
+</resources>

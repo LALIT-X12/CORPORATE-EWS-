@@ -1,0 +1,1130 @@
+# Early-Warning System for Corporate Default and Financial Manipulation
+
+Banks can deeply review only a small fraction of borrowers, while existing systems often detect distress too late, overlook governance and accounting-manipulation signals, and provide limited explanations. This project develops an explainable early-warning system that predicts corporate default and potential financial manipulation at least four quarters ahead, within a 5% alert budget. It combines bankruptcy prediction models trained on the UCI Polish or Taiwanese dataset with Beneish M-Score, Piotroski F-Score, Altman Z-Score, and soft signals such as auditor resignation, promoter pledging, rating changes, and delayed filings. Sector-adjusted scoring enables fair comparisons among Indian companies, while benchmark-to-India transfer evaluates how well internationally trained models generalize to Indian corporate data. The system validates on at least 10 Indian defaulters and 30 matched sector peers across 3 historical pre-event years, uses SHAP for explanations, and plots lead-time curves to measure detection performance across prediction horizons. Leakage-controlled evaluation uses recall at a 5% alert rate, PR-AUC, and expected loss, supporting a ranked, actionable quarterly watch-list and credit-review workflow.
+
+---
+
+## 1. Backend Engineering Objectives
+
+Build the backend around the problem statement above. Preserve the original prediction objective, datasets, financial indicators, evaluation requirements, and alert budget.
+
+The backend must also address the following four engineering gaps.
+
+### Gap 1: Inability to Capture Relational Fraud Structures
+
+**Problem:** Traditional tabular models may evaluate each company independently and miss suspicious relationships between companies, directors, promoters, auditors, related parties, lenders, and transaction counterparties.
+
+**Backend solution: Corporate Relationship Intelligence Engine**
+
+Implement a relationship-analysis module that:
+
+- Represents companies and relevant associated entities as a graph.
+- Records verified relationships such as common directors, shared promoters, common auditors, subsidiaries, related parties, and documented counterparties.
+- Detects potentially important relationship patterns, including multiple distressed companies sharing an entity, unusual related-party concentration, and suspicious transaction patterns when sufficient transaction data exists.
+- Calculates transparent network indicators, such as the number of connected distressed entities, related-party exposure, and counterparty concentration.
+- Adds relationship evidence to the manipulation-risk screening and company explanation.
+- Provides the exact relationship path and underlying source records supporting each network alert.
+- Allows analysts to confirm or reject proposed entity matches.
+
+**Implementation constraint:** Do not label a company fraudulent merely because it shares a director, address, auditor, or lender with another company. Shared relationships are investigative signals, not proof of wrongdoing.
+
+For the MVP, use PostgreSQL for relationship storage and Python with NetworkX for graph analysis. A dedicated graph database is not required.
+
+### Gap 2: Black-Box Decisioning in Regulatory Workflows
+
+**Problem:** Risk scores alone do not explain why a company was flagged, what evidence contributed to the result, or how the assessment can be independently reproduced.
+
+**Backend solution: Explainability and Decision Audit Engine**
+
+Every assessment must maintain a complete, reproducible decision record containing:
+
+- Default probability and default-risk score, when supported by a valid model.
+- Manipulation-risk screening score and individual indicator values.
+- SHAP feature contributions for supported prediction models.
+- Financial ratios and their calculation inputs.
+- Relevant relationship signals and connected entities.
+- Supporting document references and evidence mismatches.
+- Source URLs, source publication dates, reporting periods, and data-quality warnings.
+- Model version, feature schema version, scoring-policy version, and assessment date.
+- The ranking decision and the reason the company was or was not selected within the alert budget.
+
+The explanation API must return both machine-readable evidence and a human-readable explanation suitable for a credit analyst.
+
+Example:
+
+> The company was selected for review because of deteriorating operating cash flow, increasing leverage, a recent rating downgrade, and a verified relationship with another distressed entity. The model contribution, financial evidence, and source records are available for inspection.
+
+This is an illustrative explanation, not a claim about a real company.
+
+**Mandatory rules:**
+
+- SHAP must explain the actual model output for the stored feature snapshot.
+- Rule-based signals must show their calculation or rule logic.
+- Every material claim must have evidence or be explicitly marked as an unverified signal.
+- SHAP contributions must not be described as proof of causation or fraud.
+- Missing explanations must be reported as unavailable rather than generated artificially.
+
+### Gap 3: Disregard for Multi-Modal Audit Evidence
+
+**Problem:** Financial screening systems may overlook discrepancies between structured financial data and supporting documents, including annual reports, financial statements, auditor reports, rating announcements, and regulatory filings.
+
+**Backend solution: Financial Document Evidence and Reconciliation Engine**
+
+Create a document-ingestion and evidence-reconciliation pipeline.
+
+The system should support:
+
+1. Uploading permitted PDF and CSV evidence, together with references to public HTML filings.
+2. Extracting text and tables from supported financial documents.
+3. Identifying candidate financial facts, reporting periods, amounts, units, dates, and relevant company identifiers.
+4. Comparing extracted facts against structured financial records and previously reported periods.
+5. Identifying potential discrepancies in reported revenue, debt, cash flow, liabilities, related-party transactions, and other supported financial fields.
+6. Linking potential discrepancies to the corresponding company assessment.
+7. Recording document provenance, page numbers or table references where available, extraction confidence, and verification status.
+8. Allowing an analyst to confirm, reject, or correct an extracted fact.
+9. Including material, verified discrepancies in the explanation and review workflow.
+
+Represent document-processing outcomes using explicit states such as:
+
+- `uploaded`
+- `processing`
+- `extracted`
+- `awaiting_verification`
+- `verified`
+- `rejected`
+- `failed`
+
+Each extracted fact must preserve its original source reference and reporting context.
+
+**Evidence comparison rules:**
+
+- Compare figures only when their reporting periods, currencies, units, accounting definitions, and consolidation scopes are compatible.
+- Distinguish genuine discrepancies from differences caused by restatements, rounding, reporting scope, or unit conversions.
+- Do not automatically interpret every inconsistency as accounting manipulation.
+- Do not treat extraction confidence as proof that a financial claim is true.
+- Do not silently overwrite original financial records with extracted document values.
+- Never invent evidence, document contents, page references, or source citations.
+- Clearly distinguish automatically extracted facts from facts verified by a human reviewer.
+
+For the hackathon MVP, implement document upload, metadata storage, text/table extraction, candidate fact reconciliation, and analyst verification. Add more advanced document extraction only where it is feasible and testable.
+
+### Gap 4: Metric Mismatch in Production
+
+**Problem:** A model can achieve high overall accuracy while missing costly defaults, failing to identify manipulation risk, or overwhelming analysts with false alarms.
+
+**Backend solution: Capacity-Constrained Risk Evaluation Engine**
+
+The system must optimize the review queue using the stated 5% alert budget and asymmetric error cost.
+
+Implement and report:
+
+- Recall at a 5% alert rate.
+- Precision among selected alerts.
+- PR-AUC.
+- Expected evaluation cost using the specified cost ratio.
+- Lead-time performance across supported prediction horizons.
+- Calibration metrics when the available validation data supports them.
+- Model coverage and the number of unscorable companies.
+- False-negative and false-positive counts.
+- Alert counts, analyst-review workload, and sector-wise evaluation.
+- Data-quality and model-drift indicators where sufficient historical data exists.
+
+Use the evaluation objective:
+
+`Expected Cost = 20 × False Negatives + 1 × False Positives`
+
+The alert policy must select no more than 5% of eligible companies per run. For 800 eligible companies, the capacity is 40 alerts.
+
+Do not use accuracy as the primary success metric. Report the underlying counts and denominators alongside summary metrics.
+
+Evaluate the benchmark model, Indian case panel, and any additional network or document signals separately before measuring the effect of combining them. The combined system should be compared with a baseline to establish whether the extra modules improve review prioritization.
+
+---
+
+## 2. Recommended Technology Stack
+
+Use a Python-first backend to keep data validation, machine learning, financial calculations, relationship analysis, and evidence processing in one maintainable codebase.
+
+| Component | Technology | Purpose |
+|---|---|---|
+| REST API | FastAPI | Backend endpoints |
+| Programming language | Python 3.11+ | Business logic and ML |
+| API validation | Pydantic v2 | Validated request and response contracts |
+| Database | PostgreSQL | Companies, statements, relationships, assessments, and audit records |
+| ORM and migrations | SQLAlchemy 2.x, Alembic | Database management |
+| Data processing | pandas, NumPy | Financial data processing |
+| Baseline ML | scikit-learn | Classification, preprocessing, and evaluation |
+| Boosting model | LightGBM or XGBoost | Optional tabular model comparison |
+| Model explanations | SHAP | Feature-contribution explanations |
+| Graph analysis | NetworkX | Relationship features and graph patterns |
+| PDF processing | PyMuPDF and/or pdfplumber | Supported document text and table extraction |
+| HTML processing | BeautifulSoup | Parsing permitted public filing pages |
+| Tests | pytest | Unit, integration, and leakage tests |
+| Deployment | Docker Compose | Repeatable local development |
+| Frontend integration | JSON REST API | Dashboard and analyst workflow integration |
+
+Keep the initial implementation modular and avoid unnecessary infrastructure such as Kubernetes, a dedicated feature store, distributed task queues, or a separate graph database.
+
+Document parsing and model training should run as isolated backend jobs when needed, rather than blocking normal dashboard requests.
+
+---
+
+## 3. System Architecture
+
+```mermaid
+flowchart TD
+    UI[Credit Desk Dashboard] --> API[FastAPI REST API]
+
+    API --> AUTH[Authentication and Authorization]
+    AUTH --> SERVICES[Application Services]
+
+    CSV[Financial CSV Imports] --> ING[Data Ingestion and Validation]
+    DOC[Financial Documents] --> DOCS[Document Extraction Pipeline]
+    REL[Relationship Records] --> GRAPH[Entity Resolution and Graph Engine]
+    SRC[Approved Public Sources] --> ING
+    SRC --> DOCS
+    SRC --> GRAPH
+
+    ING --> DB[(PostgreSQL)]
+    DOCS --> EVID[Evidence Reconciliation]
+    EVID --> DB
+    GRAPH --> DB
+
+    DB --> SNAP[Point-in-Time Feature Builder]
+    SNAP --> RATIOS[Financial Ratios and Sector Features]
+    SNAP --> NET[Relationship Features]
+    SNAP --> AUDIT[Verified Document Evidence]
+
+    RATIOS --> DEFAULT[Default Prediction Model]
+    RATIOS --> MANIP[Financial Manipulation Screening]
+    NET --> MANIP
+    AUDIT --> MANIP
+
+    DEFAULT --> RANK[Risk Ranking and 5 Percent Alert Policy]
+    MANIP --> RANK
+
+    RANK --> EXPL[SHAP and Evidence-Based Explanation]
+    EXPL --> DB
+
+    DB --> API
+    API --> UI
+
+    UI --> REVIEW[Analyst Review Actions]
+    REVIEW --> DB
+    REVIEW --> LOG[Audit Trail]
+```
+
+### Architecture rules
+
+1. Every assessment must use data that was publicly available on or before its assessment date.
+2. The default prediction model and manipulation screening must remain distinguishable.
+3. Relationship signals and document evidence must have their own provenance and verification states.
+4. The ranking policy must enforce the review-capacity limit deterministically.
+5. Model results, evidence, explanations, and reviewer actions must be traceable.
+6. Training must be separated from inference.
+7. Failed extraction, missing data, or unavailable predictions must never be treated as a zero-risk result.
+8. Demonstration data must be clearly labelled and must not be represented as verified real-world evidence.
+
+---
+
+## 4. Project Directory Structure
+
+Create the following structure:
+
+```text
+corporate-ews/
+├── README.md
+├── pyproject.toml
+├── .env.example
+├── .gitignore
+├── Dockerfile
+├── docker-compose.yml
+├── alembic.ini
+├── alembic/
+│
+├── app/
+│   ├── main.py
+│   │
+│   ├── core/
+│   │   ├── config.py
+│   │   ├── logging.py
+│   │   ├── security.py
+│   │   └── errors.py
+│   │
+│   ├── db/
+│   │   ├── session.py
+│   │   ├── base.py
+│   │   └── models/
+│   │       ├── company.py
+│   │       ├── financial_period.py
+│   │       ├── soft_signal.py
+│   │       ├── relationship.py
+│   │       ├── evidence_document.py
+│   │       ├── evidence_claim.py
+│   │       ├── assessment.py
+│   │       ├── assessment_run.py
+│   │       ├── model_version.py
+│   │       ├── review_action.py
+│   │       ├── import_job.py
+│   │       └── audit_event.py
+│   │
+│   ├── schemas/
+│   │   ├── company.py
+│   │   ├── financial.py
+│   │   ├── relationship.py
+│   │   ├── evidence.py
+│   │   ├── assessment.py
+│   │   └── review.py
+│   │
+│   ├── api/
+│   │   └── v1/
+│   │       ├── health.py
+│   │       ├── companies.py
+│   │       ├── financials.py
+│   │       ├── signals.py
+│   │       ├── relationships.py
+│   │       ├── documents.py
+│   │       ├── evidence.py
+│   │       ├── assessments.py
+│   │       ├── watchlist.py
+│   │       ├── reviews.py
+│   │       ├── imports.py
+│   │       └── models.py
+│   │
+│   ├── services/
+│   │   ├── company_service.py
+│   │   ├── ingestion_service.py
+│   │   ├── assessment_service.py
+│   │   ├── watchlist_service.py
+│   │   ├── relationship_service.py
+│   │   ├── evidence_service.py
+│   │   ├── reconciliation_service.py
+│   │   └── review_service.py
+│   │
+│   ├── evidence/
+│   │   ├── document_parser.py
+│   │   ├── table_extractor.py
+│   │   ├── claim_normalizer.py
+│   │   ├── reconciliation.py
+│   │   └── provenance.py
+│   │
+│   └── ml/
+│       ├── data_audit.py
+│       ├── dataset_adapters/
+│       │   ├── uci_polish.py
+│       │   └── uci_taiwanese.py
+│       ├── feature_mapping.py
+│       ├── point_in_time.py
+│       ├── financial_ratios.py
+│       ├── sector_adjustment.py
+│       ├── relationship_features.py
+│       ├── manipulation_scores.py
+│       ├── labels.py
+│       ├── train.py
+│       ├── evaluate.py
+│       ├── calibrate.py
+│       ├── alert_policy.py
+│       ├── explain.py
+│       └── schemas.py
+│
+├── scripts/
+│   ├── audit_uci_data.py
+│   ├── import_indian_case_panel.py
+│   ├── import_relationships.py
+│   ├── evaluate_case_panel.py
+│   └── seed_demo.py
+│
+├── tests/
+│   ├── unit/
+│   ├── integration/
+│   ├── test_no_future_data.py
+│   ├── test_relationships.py
+│   ├── test_evidence_reconciliation.py
+│   └── test_alert_budget.py
+│
+├── configs/
+│   └── distress.yaml
+│
+└── docs/
+    ├── data_dictionary.md
+    ├── model_card.md
+    ├── evidence_schema.md
+    ├── evaluation_protocol.md
+    └── security.md
+```
+
+The coding agent must create the modules and tests as actual files. Creating the directory structure alone does not complete implementation.
+
+---
+
+## 5. Database Design
+
+Use PostgreSQL as the system of record.
+
+### 5.1 Core tables
+
+**`companies`**
+
+Stores canonical company identity, company name, sector, identifiers, peer group, and data provenance.
+
+**`financial_periods`**
+
+Stores reported financial values, reporting periods, currencies, publication timestamps, source links, and statement versions.
+
+**`soft_signals`**
+
+Stores auditor resignations, promoter pledging, rating changes, delayed filings, and other relevant governance signals.
+
+**`assessment_runs`**
+
+Stores the date, eligible company count, prediction horizon, alert budget, model version, scoring policy, and execution status.
+
+**`risk_assessments`**
+
+Stores default risk, manipulation screening, indicator values, relationship signals, evidence discrepancies, explanations, ranking, and data-quality warnings.
+
+**`model_versions`**
+
+Stores model artifacts, feature schemas, training-data references, label definitions, validation results, and version identifiers.
+
+**`review_actions`**
+
+Stores analyst decisions, review status, reasons, timestamps, and follow-up actions.
+
+**`import_jobs`**
+
+Stores import status, source details, file hashes, accepted-row counts, rejected-row counts, and validation errors.
+
+**`audit_events`**
+
+Stores important changes to assessments, configurations, reviewer actions, and access-sensitive operations.
+
+### 5.2 Relationship tables
+
+**`entities`**
+
+Represent relevant graph entities:
+
+- Company
+- Director
+- Promoter
+- Auditor or audit firm
+- Lender
+- Related party
+- Transaction counterparty, when supported by available data
+
+Each entity should have a canonical internal identifier and any known source identifiers.
+
+**`entity_relationships`**
+
+Recommended fields:
+
+```text
+relationship_id
+source_entity_id
+target_entity_id
+relationship_type
+valid_from
+valid_to
+observed_at
+publicly_available_at
+source_url
+source_name
+confidence
+verification_status
+metadata_json
+```
+
+Relationship types must come from an enumerated, documented set.
+
+Store the source and temporal validity of each relationship. Do not assume a relationship was active throughout a company's entire history.
+
+**`network_features`**
+
+Store calculated network indicators for a company and assessment snapshot, including:
+
+```text
+company_id
+assessment_id
+connected_entity_count
+connected_distressed_entity_count
+related_party_exposure_ratio
+counterparty_concentration
+network_feature_values_json
+relationship_evidence_json
+calculated_at
+feature_version
+```
+
+Optional fields may be null when the underlying data is unavailable. Network features must not be fabricated.
+
+### 5.3 Document evidence tables
+
+**`evidence_documents`**
+
+Recommended fields:
+
+```text
+document_id
+company_id
+document_type
+source_url
+source_name
+file_hash
+storage_reference
+publication_date
+reporting_period_start
+reporting_period_end
+document_status
+created_at
+```
+
+**`evidence_claims`**
+
+Recommended fields:
+
+```text
+claim_id
+document_id
+company_id
+claim_type
+field_name
+reported_value
+unit
+currency
+reporting_period
+page_number
+table_reference
+extraction_method
+extraction_confidence
+verification_status
+verified_by
+verified_at
+source_context
+```
+
+**`evidence_mismatches`**
+
+Recommended fields:
+
+```text
+mismatch_id
+assessment_id
+claim_id
+structured_record_id
+mismatch_type
+structured_value
+document_value
+comparison_context
+severity
+verification_status
+explanation
+created_at
+```
+
+Do not delete or overwrite original reported values to resolve a mismatch. Record corrections as new, traceable events.
+
+Use foreign keys, unique constraints, and indexes for company IDs, reporting periods, publication timestamps, assessment runs, relationship types, document status, and review status.
+
+---
+
+## 6. Financial Data and ML Pipeline
+
+### 6.1 UCI benchmark data
+
+Use one of the specified UCI bankruptcy datasets as the initial benchmark.
+
+The coding agent must inspect the selected data before training and document:
+
+- Dataset source and version.
+- Target definition and label orientation.
+- Available columns and their meanings.
+- Class distribution and missing values.
+- Duplicates and available company/time identifiers.
+- Whether a defensible chronological split is possible.
+- Whether the data supports the intended four-quarter prediction horizon.
+
+Do not assume that all datasets contain the same features or a true quarter-level time dimension.
+
+### 6.2 Canonical financial features
+
+Implement documented transformations for applicable financial data:
+
+- Profitability and margin measures.
+- Liquidity and working-capital measures.
+- Debt, leverage, and interest coverage.
+- Operating cash flow.
+- Revenue, receivable, debt, and margin changes.
+- Relevant historical trends.
+- Sector-relative indicators.
+
+Each feature must document its source fields, formula, period requirements, denominator handling, and missing-data behavior.
+
+### 6.3 Financial manipulation indicators
+
+Implement:
+
+- Beneish M-Score.
+- Piotroski F-Score.
+- Appropriate Altman Z-Score variants.
+- Soft-signal indicators for auditor resignation, promoter pledging, rating changes, and delayed filings.
+- Additional verified relationship and document-evidence signals.
+
+Calculate each financial indicator only when its required source information is available.
+
+Store the individual component values and the indicator result. Return an explicit unavailable status when required inputs are missing.
+
+Do not describe a financial screening indicator as proof that a company manipulated its accounts.
+
+### 6.4 Default prediction
+
+Build a reproducible model-training pipeline:
+
+1. Audit the chosen UCI dataset.
+2. Validate the target and feature mappings.
+3. Build a majority-class baseline and regularized logistic regression baseline.
+4. Compare a tree-based or boosting model where appropriate.
+5. Fit imputers, scalers, feature selection, and other preprocessing only on training data.
+6. Tune parameters and probability calibration on validation data.
+7. Evaluate once on held-out test data.
+8. Save the model artifact, feature schema, label definition, evaluation metrics, and model version.
+
+If source features cannot be mapped semantically to Indian company data, report benchmark-to-India transfer limitations rather than substituting unrelated columns.
+
+Do not claim a calibrated Indian default probability without sufficient supporting evidence.
+
+---
+
+## 7. Relationship Intelligence Implementation
+
+The relationship engine extends the existing financial risk system. It does not replace the required bankruptcy model or financial manipulation indicators.
+
+### 7.1 Entity resolution
+
+Implement a service that:
+
+- Normalizes company names and supported identifiers.
+- Matches entities using reliable identifiers first.
+- Generates candidate matches using secondary attributes where necessary.
+- Maintains confidence and verification status.
+- Allows uncertain matches to be reviewed.
+- Preserves the source of each entity and relationship.
+
+Do not automatically merge two companies only because their names are similar.
+
+### 7.2 Network indicators
+
+Start with interpretable features:
+
+- Number of distinct connected entities.
+- Number of verified connected entities associated with past distress.
+- Number of shared directors or promoters, when documented.
+- Related-party exposure and counterparty concentration, when available.
+- Concentration of relationships among connected companies.
+- Supported network components and connection paths.
+- Transaction-cycle or circular-payment indicators only when sufficiently detailed transaction records are available.
+
+A relationship with a distressed company is not, by itself, a default prediction. Assess the strength, recency, type, and source of the connection.
+
+### 7.3 Network explanation
+
+For each material relationship signal, provide:
+
+```json
+{
+  "signal_type": "CONNECTED_DISTRESSED_ENTITY",
+  "severity": "medium",
+  "verification_status": "verified",
+  "related_entities": [],
+  "relationship_path": [],
+  "source_references": [],
+  "explanation": "A verified relationship connects the company to another entity with a documented distress event."
+}
+```
+
+The example describes the response structure, not a real finding.
+
+Network evidence must remain distinguishable from SHAP values. SHAP explains model contributions; network explanations describe relationships and evidence.
+
+---
+
+## 8. Document Extraction and Evidence Reconciliation
+
+### 8.1 Document ingestion
+
+Provide endpoints to register or upload supported documents.
+
+For each document:
+
+1. Validate file type and size.
+2. Store the file in a controlled storage location.
+3. Calculate a file hash.
+4. Record the source and publication date.
+5. Extract supported text and tables.
+6. Normalize candidate financial claims.
+7. Match claims to compatible structured records.
+8. Record possible discrepancies.
+9. Require appropriate human verification before material evidence is treated as verified.
+
+Scanned documents may require OCR as an optional component. Keep OCR results and confidence separate from verified facts.
+
+### 8.2 Reconciliation logic
+
+Compare structured financial data with document claims only after checking:
+
+- Company identity.
+- Financial reporting period.
+- Currency and scale.
+- Accounting metric and definition.
+- Consolidated versus standalone statements.
+- Restatement status.
+- Rounding and calculation tolerances.
+
+Classify outcomes using explicit categories such as:
+
+```text
+MATCH
+POSSIBLE_MISMATCH
+PERIOD_MISMATCH
+UNIT_OR_CURRENCY_MISMATCH
+SCOPE_MISMATCH
+RESTATEMENT_REVIEW_REQUIRED
+INSUFFICIENT_EVIDENCE
+```
+
+These are reconciliation statuses, not fraud labels.
+
+### 8.3 Evidence contribution to assessment
+
+A verified discrepancy may be included as a manipulation-screening signal under a documented policy. An unverified discrepancy should remain a review item rather than being treated as a confirmed accounting issue.
+
+Persist the following:
+
+- Original structured value.
+- Extracted document value.
+- Source reference and reporting period.
+- Comparison rule and tolerance.
+- Extraction method and confidence.
+- Verification status.
+- Reason for the final disposition.
+
+The interface should let an analyst inspect the original evidence without relying only on a generated summary.
+
+### 8.4 Document-processing security
+
+- Do not execute uploaded content.
+- Validate MIME types and file signatures.
+- Apply upload-size and processing-time limits.
+- Store files outside publicly served directories.
+- Do not expose local filesystem paths or credentials.
+- Use least-privilege permissions for file access.
+- Keep sensitive source documents out of public logs.
+- Track document access and verification actions in the audit trail.
+
+---
+
+## 9. Scoring, Ranking, and the 5% Alert Budget
+
+Produce separate outputs for default risk and potential financial manipulation.
+
+The assessment may include:
+
+```text
+default_probability
+default_risk_score
+manipulation_risk_score
+sector_relative_distress_percentile
+sector_relative_manipulation_percentile
+network_indicators
+document_evidence_indicators
+priority_score
+priority_rank
+alert_selected
+data_quality
+explanations
+```
+
+Use the relationship and document modules as additional evidence for the manipulation-screening and review-priority workflow. Do not silently redefine the existing financial scores.
+
+### 9.1 Ranking policy
+
+- Build the eligible portfolio using a documented rule.
+- Calculate the permitted number of alerts.
+- Rank eligible, scorable companies using a versioned priority policy.
+- Select no more than the capacity limit.
+- Use deterministic tie-breaking.
+- Persist selected and non-selected results.
+- Record the policy version and relevant evidence.
+
+For 800 eligible companies:
+
+```python
+eligible_count = 800
+alert_rate_cap = 0.05
+alert_cap = int(eligible_count * alert_rate_cap)
+
+assert alert_cap == 40
+```
+
+Use floor rounding by default for other portfolio sizes. Any minimum-one-alert exception for a very small portfolio must be explicitly approved and documented.
+
+### 9.2 Asymmetric error costs
+
+Use the specified cost objective:
+
+```python
+expected_cost = (
+    20 * false_negatives
+    + 1 * false_positives
+)
+```
+
+Tune scoring policies on validation data while respecting the alert budget.
+
+If more than 5% of eligible companies exceed a chosen threshold, the top-K operational capacity rule must take precedence.
+
+Do not tune the final policy on the held-out test set.
+
+### 9.3 Unscorable companies
+
+A company with missing data must not automatically receive a safe or zero-risk assessment.
+
+Return a documented status such as:
+
+```text
+scored
+partially_scored
+unscorable
+```
+
+Show the reasons for missing scores and report portfolio coverage. Define explicitly how unscorable companies are handled in the review workflow so missing data cannot silently hide potentially important cases.
+
+---
+
+## 10. Explainability and Audit Trail
+
+Every assessment must be reproducible using its original feature snapshot and model/scoring versions.
+
+### Required explanation payload
+
+```json
+{
+  "assessment_id": "uuid",
+  "model_version": "distress-v0.1.0",
+  "policy_version": "topk-cost20-v1",
+  "as_of_date": "2026-09-30",
+  "default_risk": {
+    "probability": null,
+    "status": "benchmark_not_calibrated_for_indian_data"
+  },
+  "manipulation_screening": {
+    "score": null,
+    "status": "calculation_pending"
+  },
+  "top_model_contributors": [],
+  "financial_indicators": [],
+  "relationship_signals": [],
+  "document_evidence": [],
+  "data_quality_warnings": [],
+  "alert_decision": {
+    "selected": false,
+    "priority_rank": null,
+    "selection_reason": null
+  }
+}
+```
+
+These fields are placeholders for the response contract, not precomputed scores. Production implementation must populate them from actual records.
+
+### Audit requirements
+
+Maintain an append-only log of material actions, including:
+
+- Assessment creation.
+- Data imports and corrections.
+- Model and scoring-policy changes.
+- Document verification.
+- Entity-match verification.
+- Analyst decisions.
+- Alert selection and review status changes.
+
+Record actor, timestamp, affected record, action type, and a safe change summary. Protect the audit trail against unauthorized modification.
+
+---
+
+## 11. REST API Endpoints
+
+Base path: `/api/v1`.
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/health` | Backend health check |
+| GET | `/companies` | Search and filter companies |
+| POST | `/companies` | Create a company |
+| GET | `/companies/{company_id}` | Retrieve company profile |
+| GET | `/companies/{company_id}/financials` | Retrieve financial periods |
+| POST | `/imports/financials` | Import financial statements |
+| POST | `/imports/signals` | Import soft signals |
+| GET | `/imports/{job_id}` | Retrieve import status and errors |
+| POST | `/relationships` | Register a sourced entity relationship |
+| GET | `/companies/{company_id}/relationships` | Retrieve company relationship evidence |
+| POST | `/relationships/{relationship_id}/verify` | Verify or reject a proposed relationship |
+| POST | `/documents` | Register or upload a document |
+| GET | `/documents/{document_id}` | Retrieve document metadata and status |
+| POST | `/documents/{document_id}/process` | Start document extraction |
+| GET | `/documents/{document_id}/claims` | Retrieve extracted financial claims |
+| POST | `/evidence/{claim_id}/verify` | Verify or reject an extracted claim |
+| GET | `/companies/{company_id}/evidence` | Retrieve supporting evidence and discrepancies |
+| POST | `/assessment-runs` | Start a versioned assessment run |
+| GET | `/assessment-runs/{run_id}` | Retrieve run status and metrics |
+| GET | `/watchlist` | Retrieve ranked watch-list |
+| GET | `/companies/{company_id}/assessments/{assessment_id}` | Retrieve full company assessment |
+| GET | `/companies/{company_id}/assessments/{assessment_id}/explanation` | Retrieve model and evidence explanations |
+| POST | `/assessments/{assessment_id}/review-actions` | Record analyst disposition |
+| GET | `/review-actions` | Search review queue |
+| GET | `/model-versions` | Retrieve model and policy versions |
+
+The `/api/v1` prefix should be included consistently in actual route definitions even though the table lists the endpoint suffixes for readability.
+
+### API implementation rules
+
+- Use Pydantic request/response models.
+- Use UUIDs and ISO-8601 timestamps.
+- Include pagination and deterministic ordering.
+- Use consistent error responses.
+- Protect import, configuration, verification, and review endpoints with authentication and authorization.
+- Avoid exposing internal stack traces or secrets.
+- Use `202 Accepted` for asynchronous operations and document the chosen job/status behavior.
+- Never return a fake successful status if model prediction or document extraction failed.
+
+---
+
+## 12. Evaluation and Testing
+
+### 12.1 Required evaluation metrics
+
+Report:
+
+1. Recall at a 5% alert rate.
+2. Precision at a 5% alert rate.
+3. PR-AUC.
+4. Expected cost using the 20:1 false-negative-to-false-positive cost ratio.
+5. Lead time before the verified default/distress event.
+6. Calibration metrics where sample size permits.
+7. Scorable portfolio coverage.
+8. False-positive and false-negative counts.
+9. Alert volume and review workload.
+10. Performance by sector where the sample size supports meaningful interpretation.
+
+Always report class prevalence and metric denominators.
+
+### 12.2 Indian case panel
+
+Build the requested evaluation panel with at least 10 Indian defaulted companies and 30 matched sector peers, across the available three historical pre-event years.
+
+For each record, retain:
+
+```text
+company_id
+sector
+observation_date
+publicly_available_at
+default_or_distress_event_date
+event_definition
+source_url
+source_name
+financial_data_status
+relationship_data_status
+document_evidence_status
+```
+
+Keep external validation cases out of model fitting and threshold selection when reporting independent Indian case-test results.
+
+A panel of 40 companies is small: a 5% alert budget means only two alerts for a 40-company run. Report actual counts and uncertainty. Do not claim statistical proof of production performance from this small panel.
+
+### 12.3 Time-aware evaluation
+
+Use chronological splits where reliable time information exists, and prevent the same company's observations from leaking between splits when evaluating generalization.
+
+Use only features that were available at the corresponding prediction date.
+
+If a UCI dataset lacks row-level dates or company identifiers, document the limitation and do not describe a random split as a time-aware evaluation.
+
+Do not manufacture quarterly history from annual financial observations.
+
+### 12.4 Ablation tests for the four gaps
+
+Demonstrate the contribution of each enhancement using the same evaluation protocol:
+
+| Experiment | Configuration | Question answered |
+|---|---|---|
+| Baseline | Default model and existing financial indicators | How well does the initial system perform? |
+| Relationship-enhanced | Baseline plus verified relationship features | Do network indicators improve prioritization? |
+| Evidence-enhanced | Baseline plus verified document discrepancies | Does document reconciliation add useful evidence? |
+| Explainability audit | Model explanations and decision provenance enabled | Can analysts reproduce and inspect decisions? |
+| Combined | Baseline plus supported relationship and document signals | Does the combined system improve outcomes within the same budget? |
+
+Report each experiment's sample size, feature coverage, alert count, recall at 5%, PR-AUC, expected cost, and lead-time results where available.
+
+Do not claim a component improves detection unless the measured results support that conclusion.
+
+### 12.5 Test requirements
+
+Implement unit and integration tests covering:
+
+- Financial indicator calculations.
+- Missing and invalid inputs.
+- Point-in-time data selection.
+- Prevention of future-data leakage.
+- Relationship-path correctness.
+- Entity-matching verification.
+- Document-claim normalization.
+- Reconciliation of reporting periods and units.
+- Explanation provenance.
+- Deterministic ranking.
+- The 5% alert limit.
+- The 20:1 error-cost calculation.
+- Handling of failed or unavailable model outputs.
+- API authentication and validation.
+
+---
+
+## 13. Environment Configuration
+
+Create `.env.example` with placeholder settings:
+
+```dotenv
+APP_ENV=development
+APP_NAME=corporate-ews
+API_V1_PREFIX=/api/v1
+
+DATABASE_URL=postgresql+psycopg://ews:ews@localhost:5432/ews
+
+MODEL_ARTIFACT_DIR=./app/ml/artifacts
+DOCUMENT_STORAGE_DIR=./data/documents
+
+DEFAULT_MODEL_VERSION=distress-v0.1.0
+PREDICTION_HORIZON_QUARTERS=4
+
+ALERT_RATE_CAP=0.05
+COST_FALSE_NEGATIVE=20
+COST_FALSE_POSITIVE=1
+
+MIN_SECTOR_PEERS=5
+LOG_LEVEL=INFO
+```
+
+Use environment variables for configuration. Never commit real passwords, API keys, confidential company records, or restricted datasets.
+
+Make document storage private by default. Add `.env`, private datasets, uploaded documents, generated logs, and large model artifacts to `.gitignore` unless a specific artifact is intentionally approved for version control.
+
+---
+
+## 14. Local Development Workflow
+
+The coding agent should implement the following workflow and make every referenced file and command functional.
+
+```bash
+# Create a virtual environment
+python -m venv .venv
+
+# Activate it on Linux/macOS
+source .venv/bin/activate
+
+# Install the project and development dependencies
+pip install -e ".[dev]"
+
+# Start PostgreSQL
+docker compose up -d db
+
+# Apply database migrations
+alembic upgrade head
+
+# Start the API
+uvicorn app.main:app --reload
+
+# Execute tests
+pytest -q
+
+# Inspect the UCI dataset before training
+python -m app.ml.data_audit --dataset polish
+
+# Train a benchmark model
+python -m app.ml.train --config configs/distress.yaml
+
+# Evaluate the model
+python -m app.ml.evaluate --config configs/distress.yaml
+```
+
+The selected dataset name, CLI arguments, and configuration files must match the actual implementation. Provide documented alternatives for the Taiwanese dataset if it is selected.
+
+The backend must not claim that commands work until their implementations and dependencies exist.
+
+---
+
+## 15. Hackathon Implementation Order
+
+Build the project in phases. Do not attempt every advanced feature before the core prediction and evaluation pipeline works.
+
+### Phase 1 — Runnable backend
+
+Implement the FastAPI application, PostgreSQL connection, migrations, company records, financial data schemas, health endpoint, validation, and automated tests.
+
+**Acceptance criteria:** The server starts, database migrations work, company records can be created and retrieved, and tests pass.
+
+### Phase 2 — Financial scoring and benchmark model
+
+Audit the UCI data, implement the financial indicators, train baseline models, build the point-in-time feature pipeline, and save versioned model artifacts.
+
+**Acceptance criteria:** Financial calculations are tested, model training is reproducible, and evaluation metrics are produced without leakage claims unsupported by the data.
+
+### Phase 3 — Risk ranking and analyst explanations
+
+Implement the 5% alert policy, cost-aware evaluation, persisted assessments, SHAP where supported, reason codes, and the review workflow.
+
+**Acceptance criteria:** The watch-list is deterministic, never exceeds the configured alert capacity, and exposes traceable explanations.
+
+### Phase 4 — Relationship intelligence
+
+Implement entity and relationship tables, source-based entity resolution, graph features, relationship-path explanations, and verification endpoints.
+
+**Acceptance criteria:** The system can show a sourced relationship path for a test case and distinguishes verified relationships from uncertain matches.
+
+### Phase 5 — Document evidence reconciliation
+
+Implement document metadata, supported PDF/HTML parsing, candidate financial-claim extraction, comparison with structured data, verification states, and mismatch explanations.
+
+**Acceptance criteria:** A test document produces traceable extracted claims and discrepancies; unsupported documents and extraction failures are handled safely.
+
+### Phase 6 — Integrated evaluation and demonstration
+
+Run the UCI benchmark evaluation, prepare the Indian case panel, measure recall at 5%, calculate expected cost, generate supported lead-time curves, and compare baseline versus enhanced configurations.
+
+**Acceptance criteria:** The results are reproducible, the 5% budget is enforced, and the dashboard shows the source and limitations of every material assessment.
+
+---
+
+## 16. Instructions for the Vibe-Coding Agent
+
+Use this README as the backend implementation specification.
+
+**Non-negotiable requirements:**
+
+1. Preserve the original problem statement and its objectives.
+2. Build an actual, runnable backend rather than generating placeholder files.
+3. Implement the required financial indicators and benchmark model before adding optional complexity.
+4. Address the four engineering gaps through relationship intelligence, explanation provenance, document evidence reconciliation, and cost-aware evaluation.
+5. Use real calculations, validated data contracts, and persisted records. Never hard-code risk scores or demo conclusions.
+6. Do not fabricate Indian company data, relationships, financial statements, documents, or evaluation outcomes.
+7. Keep real, verified, extracted, synthetic, and unverified evidence clearly distinguished.
+8. Prevent data leakage and preserve point-in-time assessment integrity.
+9. Enforce the 5% alert budget and the specified 20:1 error-cost ratio.
+10. Create meaningful tests for financial formulas, graph analysis, evidence reconciliation, ranking, and API behavior.
+11. Implement features incrementally, running tests after every phase.
+12. Document every feature that is simulated, unavailable, or not supported by the available data.
+
+### Expected final deliverable
+
+The completed application should provide a traceable quarterly borrower watch-list, separate default and manipulation-risk assessments, financial indicator calculations, relationship-based investigative signals, document-backed evidence checks, interpretable model explanations, an auditable analyst workflow, and leakage-controlled evaluation within the specified review-capacity constraints.
+
+The project is a decision-support and early-warning tool. It must not represent a risk score, shared relationship, or document discrepancy as definitive proof of default or financial fraud.

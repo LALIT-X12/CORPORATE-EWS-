@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Corporate EWS : Follow the money, every hop - Early Warning System for Banks</title>
+  <meta name="description"
+    content="Institutional early-warning system predicting corporate default and financial manipulation 4 quarters ahead within a 5% alert budget.">
+  <link rel="canonical" href="https://corporate-ews.bank.internal/">
+
+  <!-- Institutional Typography: Sora + JetBrains Mono (No Inter, Geist, Space Grotesk) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet">
+
+  <!-- Favicon -->
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+
+  <!-- CSS Design System -->
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/visualizations.css">
+</head>
+
+<body>
+  <!-- Application Shell -->
+  <div id="app" class="app-container">
+
+    <!-- Institutional Header -->
+    <header class="app-header" id="app_header" role="banner">
+      <div class="header-left">
+        <div class="brand-indicator" id="sys_indicator" title="EWS System Operational - 5% Alert Budget Policy Active">
+        </div>
+        <a href="/" class="brand-link" style="text-decoration:none;">
+          <div class="brand-text">
+            <div class="brand-title-row">
+              <span class="brand-title">Corporate EWS</span>
+              <span class="badge badge-cap" id="badge_cap">5% BUDGET</span>
+              <span class="badge badge-version">v2.4</span>
+            </div>
+            <span class="brand-subtitle">Early Warning System for Banks</span>
+          </div>
+        </a>
+      </div>
+
+      <div class="header-center">
+        <nav class="nav-tabs" role="tablist" aria-label="Main Navigation" id="main_navigation">
+          <button class="nav-tab active" data-tab="overview" id="nav_overview" role="tab" aria-selected="true">
+            Overview
+          </button>
+          <button class="nav-tab" data-tab="stations" id="nav_stations" role="tab" aria-selected="false">
+            5 Stations
+          </button>
+          <button class="nav-tab" data-tab="watchlist" id="nav_watchlist" role="tab" aria-selected="false">
+            Watchlist
+            <span class="nav-counter" id="watchlist_count_badge">40</span>
+          </button>
+          <button class="nav-tab" data-tab="investigation" id="nav_investigation" role="tab" aria-selected="false">
+            Investigation
+          </button>
+          <button class="nav-tab" data-tab="simulator" id="nav_simulator" role="tab" aria-selected="false">
+            Simulator
+            <span class="badge badge-subtle" style="font-size:0.65rem;">5% GAP</span>
+          </button>
+          <button class="nav-tab" data-tab="benchmark" id="nav_benchmark" role="tab" aria-selected="false">
+            Benchmark DB
+          </button>
+        </nav>
+      </div>
+
+      <div class="header-right">
+        <div class="run-info" title="Current evaluation period">
+          <span id="header_as_of_date">2026-Q3</span>
+        </div>
+        <a href="/login" class="btn btn-outline btn-sm" id="header_login_btn" style="border-radius:4px;">Sign In</a>
+        <button class="btn btn-sm btn-secondary" id="theme_toggle_btn" title="Toggle Theme"
+          aria-label="Toggle dark/light theme" style="border-radius:4px;">
+          <span id="theme_label">Light</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="app-main" id="app_main" role="main">
+      <div id="view_container" class="view-container">
+        <div class="loading-state">
+          <div class="spinner" role="status" aria-label="Loading"></div>
+          <p>Connecting to Corporate EWS Benchmark Database...</p>
+        </div>
+      </div>
+    </main>
+
+    <!-- Toast Container -->
+    <div id="toast_container" class="toast-container" role="alert" aria-live="polite"></div>
+
+    <!-- Committee Disposition Modal -->
+    <div id="disposition_modal" class="modal-backdrop hidden" role="dialog" aria-modal="true"
+      aria-labelledby="modal_borrower_name">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-warning)" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <h3 id="modal_borrower_name">Credit Committee Review Action</h3>
+          </div>
+          <button class="modal-close-btn" id="modal_close_btn" aria-label="Close modal">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+              aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-description">
+            Log an immutable regulatory action for <strong id="modal_company_title">Borrower</strong>. All actions are
+            logged into the regulatory compliance audit trail under RBI and SEBI audit norms.
+          </p>
+          <div class="form-group">
+            <label for="analyst_name_input">Lead Credit Analyst / Officer</label>
+            <input type="text" id="analyst_name_input" class="form-input" value="Vikram Sengupta (Lead Credit Officer)"
+              autocomplete="name">
+          </div>
+          <div class="form-group">
+            <label for="disposition_select">Action Disposition</label>
+            <select id="disposition_select" class="form-select">
+              <option value="ESCALATE_TO_BOARD_RISK_COMMITTEE">Escalate to Board Risk Committee (Systemic Exposure)
+              </option>
+              <option value="COMMISSION_FORENSIC_AUDIT">Commission Independent Forensic Audit (CARO/Fraud Alert)
+              </option>
+              <option value="ENHANCE_MONITORING_QUARTERLY">Enhanced Quarterly Watchlist Monitoring (SMA-2 Alert)
+              </option>
+              <option value="REJECT_ALERT_FALSE_POSITIVE">Reject Alert as False Alarm (Documented Safe Accruals)
+              </option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="justification_notes">Regulatory Findings and Mandatory Justification Notes</label>
+            <textarea id="justification_notes" class="form-textarea" rows="4"
+              placeholder="Detail the accounting anomalies, network links, or debt maturity mismatch requiring this decision..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="modal_cancel_btn">Cancel</button>
+          <button class="btn btn-primary" id="modal_submit_btn">Commit Review Action</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Upload Document Modal -->
+    <div id="upload_doc_modal" class="modal-backdrop hidden" role="dialog" aria-modal="true"
+      aria-label="Upload Audit Filing">
+      <div class="modal-card">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary-light)"
+              stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="16 16 12 12 8 16" />
+              <line x1="12" y1="12" x2="12" y2="21" />
+              <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" />
+            </svg>
+            <h3>Upload and Extract Multi-Modal Audit Filing</h3>
+          </div>
+          <button class="modal-close-btn" id="upload_modal_close_btn" aria-label="Close upload modal">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+              aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p class="modal-description">
+            Upload an Annual Report (PDF), CARO statement, or Rating press release to automatically extract claimed
+            financial commitments and reconcile them against the structured database.
+          </p>
+          <div class="form-group">
+            <label for="upload_doc_title">Document Title</label>
+            <input type="text" id="upload_doc_title" class="form-input"
+              placeholder="e.g. FY 2023-24 Auditor Report and CARO Disclosures">
+          </div>
+          <div class="form-group">
+            <label for="upload_doc_type">Document Type</label>
+            <select id="upload_doc_type" class="form-select">
+              <option value="AUDITOR_CARO_REPORT">Statutory Auditor CARO Report</option>
+              <option value="ANNUAL_REPORT">Consolidated Annual Report (MDA / Notes)</option>
+              <option value="RATING_RATIONALE">Credit Rating Agency Press Release</option>
+              <option value="FORENSIC_AUDIT_EXCERPT">Forensic Investigation Report</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="upload_metric_name">Extracted Disclosure Metric</label>
+            <input type="text" id="upload_metric_name" class="form-input"
+              placeholder="e.g. Unrecorded Off-Balance Sheet Guarantees">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.85rem;">
+            <div class="form-group">
+              <label for="upload_claimed_val">Claimed Value (Rs. Crores)</label>
+              <input type="number" id="upload_claimed_val" class="form-input" placeholder="e.g. 14500">
+            </div>
+            <div class="form-group">
+              <label for="upload_structured_val">Structured DB Value (Rs. Crores)</label>
+              <input type="number" id="upload_structured_val" class="form-input" placeholder="e.g. 2100">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="upload_context_snippet">Context Snippet from Document Page</label>
+            <textarea id="upload_context_snippet" class="form-textarea" rows="3"
+              placeholder="Paste excerpt from note or statement..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" id="upload_modal_cancel_btn">Cancel</button>
+          <button class="btn btn-primary" id="upload_modal_submit_btn">Extract and Reconcile Claim</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Institutional Footer -->
+    <footer class="app-footer" role="contentinfo">
+      <div class="footer-container">
+        <div class="footer-top-grid">
+          <div class="footer-col">
+            <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;">
+              <div style="width:8px;height:8px;background:var(--color-risk-critical);border-radius:2px;"></div>
+              <span
+                style="font-family:var(--font-heading);font-weight:700;font-size:0.9rem;color:var(--text-primary);">Corporate
+                EWS</span>
+            </div>
+            <p style="font-size:0.78rem;color:var(--text-muted);line-height:1.6;max-width:260px;">
+              Explainable early-warning intelligence for institutional credit risk officers. Predicting corporate
+              default
+              4 quarters ahead within a 5% alert capacity budget.
+            </p>
+            <p style="font-size:0.72rem;color:var(--text-muted);margin-top:0.75rem;">
+              Compliant with RBI Master Circular DBS.CO.PPD.BC and Section 143(12) of Companies Act 2013.
+            </p>
+          </div>
+          <div class="footer-col">
+            <h4>Surveillance</h4>
+            <ul>
+              <li><a href="/" onclick="App&&App.navigateTo('overview');return false;">Executive Overview</a></li>
+              <li><a href="/watchlist" onclick="App&&App.navigateTo('watchlist');return false;">Borrower Watchlist
+                  (40)</a></li>
+              <li><a href="/investigate" onclick="App&&App.navigateTo('investigation');return false;">Forensic
+                  Investigation</a></li>
+              <li><a href="/simulator" onclick="App&&App.navigateTo('simulator');return false;">Asymmetric Loss
+                  Simulator</a></li>
+              <li><a href="/benchmark" onclick="App&&App.navigateTo('benchmark');return false;">Benchmark Database</a>
+              </li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h4>Stations</h4>
+            <ul>
+              <li><a href="/station/vault" onclick="App&&App.navigateTo('stations','vault');return false;">01 - The
+                  Vault</a></li>
+              <li><a href="/station/network" onclick="App&&App.navigateTo('stations','network');return false;">02 -
+                  Network Rails</a></li>
+              <li><a href="/station/global" onclick="App&&App.navigateTo('stations','global');return false;">03 - Global
+                  Contagion</a></li>
+              <li><a href="/station/fraud" onclick="App&&App.navigateTo('stations','fraud');return false;">04 - Fraud
+                  Engine</a></li>
+              <li><a href="/station/hq" onclick="App&&App.navigateTo('stations','hq');return false;">05 - Bank HQ</a>
+              </li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <h4>Institutional</h4>
+            <ul>
+              <li><a href="/login">Access Portal</a></li>
+              <li><a href="/contact">Deployment Inquiry</a></li>
+              <li><a href="/privacy">Privacy Policy</a></li>
+              <li><a href="/terms">Terms and Conditions</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <span>
+            &copy; 2026 Corporate EWS - Institutional Risk Intelligence. All rights reserved.
+            Model Version: EWS-XGB-DualTransfer-v2.4
+          </span>
+          <div class="footer-legal-links">
+            <a href="/privacy">Privacy Policy</a>
+            <a href="/terms">Terms and Conditions</a>
+            <a href="/contact">Contact</a>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+  </div><!-- end .app-container -->
+
+  <!-- Application Scripts -->
+  <script src="js/utils/formatters.js"></script>
+  <script src="js/utils/chartUtils.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/components/overview.js"></script>
+  <script src="js/components/stations.js"></script>
+  <script src="js/components/watchlist.js"></script>
+  <script src="js/components/networkGraph.js"></script>
+  <script src="js/components/evidenceStudio.js"></script>
+  <script src="js/components/investigation.js"></script>
+  <script src="js/components/simulator.js"></script>
+  <script src="js/components/benchmark.js"></script>
+  <script src="js/app.js"></script>
+</body>
+
+</html>

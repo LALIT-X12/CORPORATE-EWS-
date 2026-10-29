@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#070d18"/>
+      <stop offset="100%" stop-color="#0f1d38"/>
+    </linearGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  <rect x="80" y="80" width="1040" height="470" rx="8" fill="#0c1526" stroke="#1e293b" stroke-width="2"/>
+  
+  <text x="130" y="150" font-family="'Sora', 'Segoe UI', sans-serif" font-weight="700" font-size="20" fill="#3b82f6" letter-spacing="2">INSTITUTIONAL EARLY WARNING SYSTEM</text>
+  <text x="130" y="220" font-family="'Sora', 'Segoe UI', sans-serif" font-weight="700" font-size="44" fill="#f8fafc">Corporate EWS: Follow the Money, Every Hop</text>
+  <text x="130" y="270" font-family="'JetBrains Mono', monospace" font-size="20" fill="#94a3b8">Sub-40ms Transaction Risk Intelligence | 5% Alert Budget | Forensic SHAP Explainability</text>
+
+  <!-- Metric Badges -->
+  <rect x="130" y="320" width="220" height="80" rx="4" fill="#141f36" stroke="#2563eb" stroke-width="1"/>
+  <text x="150" y="350" font-family="'JetBrains Mono', monospace" font-size="12" fill="#64748b">ALERT BUDGET CAP</text>
+  <text x="150" y="385" font-family="'Sora', sans-serif" font-weight="700" font-size="24" fill="#60a5fa">5% Capacity (K=2)</text>
+
+  <rect x="380" y="320" width="220" height="80" rx="4" fill="#141f36" stroke="#334155" stroke-width="1"/>
+  <text x="400" y="350" font-family="'JetBrains Mono', monospace" font-size="12" fill="#64748b">LEAD-TIME HORIZON</text>
+  <text x="400" y="385" font-family="'Sora', sans-serif" font-weight="700" font-size="24" fill="#f8fafc">4 Quarters Ahead</text>
+
+  <rect x="630" y="320" width="220" height="80" rx="4" fill="#141f36" stroke="#334155" stroke-width="1"/>
+  <text x="650" y="350" font-family="'JetBrains Mono', monospace" font-size="12" fill="#64748b">BENCHMARK RECALL</text>
+  <text x="650" y="385" font-family="'Sora', sans-serif" font-weight="700" font-size="24" fill="#10b981">90.0% @ 5% Rate</text>
+
+  <rect x="880" y="320" width="200" height="80" rx="4" fill="#141f36" stroke="#ef4444" stroke-width="1"/>
+  <text x="900" y="350" font-family="'JetBrains Mono', monospace" font-size="12" fill="#64748b">ASYMMETRIC LOSS</text>
+  <text x="900" y="385" font-family="'Sora', sans-serif" font-weight="700" font-size="24" fill="#ef4444">20:1 FN:FP Ratio</text>
+
+  <text x="130" y="470" font-family="'JetBrains Mono', monospace" font-size="14" fill="#64748b">
+    Compliant with RBI Early Warning Framework (DBS.CO.PPD.BC.No./01.01.005/2014-15) &amp; Section 143(12) of Companies Act 2013
+  </text>
+</svg>
